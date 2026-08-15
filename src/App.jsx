@@ -1,24 +1,50 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Zap, Send, Sparkles, Mic, MicOff, ImagePlus, X } from "lucide-react";
+import { Send, Mic, MicOff, ImagePlus, X } from "lucide-react";
 import SpaceBackground from "./components/SpaceBackground.jsx";
 import ElectricThinking from "./components/ElectricThinking.jsx";
-import { saveMessage } from "./lib/supabase.js";
+import WelcomeScreen from "./components/WelcomeScreen.jsx";
+import UserMenu from "./components/UserMenu.jsx";
+import Login from "./pages/Login.jsx";
+import Signup from "./pages/Signup.jsx";
+import {
+  saveMessage,
+  fetchHistoryForUser,
+  getSession,
+  clearSession,
+} from "./lib/supabase.js";
 
 const BACKEND_URL = "https://mahoday-backend-mq9v.onrender.com/chat";
 
 export default function App() {
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content:
-        "Namaste! Main Mahoday hoon — SRIMT ka apna AI assistant. Admission, courses, fees ya placements ke baare mein kuch bhi pooch sakte ho.",
-    },
-  ]);
+  const [user, setUser] = useState(() => getSession());
+  const [authView, setAuthView] = useState("login"); // 'login' | 'signup'
+
+  if (!user) {
+    return (
+      <div className="relative w-full h-dvh text-white flex items-center justify-center overflow-hidden">
+        <SpaceBackground />
+        <div className="relative z-10 w-full px-6">
+          {authView === "login" ? (
+            <Login onAuthed={setUser} onSwitchToSignup={() => setAuthView("signup")} />
+          ) : (
+            <Signup onAuthed={setUser} onSwitchToLogin={() => setAuthView("login")} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return <ChatApp user={user} onLogout={() => { clearSession(); setUser(null); }} />;
+}
+
+function ChatApp({ user, onLogout }) {
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const [listening, setListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageBase64, setImageBase64] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -28,7 +54,6 @@ export default function App() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, thinking]);
 
-  // ---- Voice input (Web Speech API) ----
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -36,14 +61,12 @@ export default function App() {
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = "en-IN";
-
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setInput((prev) => (prev ? prev + " " + transcript : transcript));
     };
     recognition.onend = () => setListening(false);
     recognition.onerror = () => setListening(false);
-
     recognitionRef.current = recognition;
   }, []);
 
@@ -61,7 +84,6 @@ export default function App() {
     }
   };
 
-  // ---- Photo upload ----
   const handleImagePick = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -79,14 +101,23 @@ export default function App() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // ---- Send message ----
+  const handleNewChat = () => {
+    setMessages([]);
+  };
+
+  const handleOpenHistory = async () => {
+    const history = await fetchHistoryForUser(user.id);
+    setMessages(history.map((m) => ({ role: m.role, content: m.content })));
+    setShowHistory(true);
+  };
+
   const handleSend = async () => {
     const text = input.trim();
     if ((!text && !imageBase64) || thinking) return;
 
     const userMsg = { role: "user", content: text, image: imagePreview };
     setMessages((prev) => [...prev, userMsg]);
-    saveMessage("user", text || "[image]");
+    saveMessage("user", text || "[image]", user.id);
 
     const payload = { message: text, image: imageBase64 };
     setInput("");
@@ -102,15 +133,11 @@ export default function App() {
       const data = await res.json();
       const reply = data?.reply || "Sorry, abhi jawab nahi mil paya.";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-      saveMessage("assistant", reply);
+      saveMessage("assistant", reply, user.id);
     } catch (e) {
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content:
-            "Backend abhi connect nahi hai (placeholder URL hai). Gemini API key aur FastAPI backend deploy hote hi ye live jawab dega.",
-        },
+        { role: "assistant", content: "Backend se connect nahi ho paya. Thodi der mein try karo." },
       ]);
     } finally {
       setThinking(false);
@@ -118,39 +145,52 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-full h-screen text-white flex flex-col overflow-hidden font-sans">
-      <SpaceBackground />
+    <div className="relative w-full h-dvh text-white flex flex-col font-sans">
+      <div className="absolute inset-0">
+        <SpaceBackground />
+      </div>
 
-      {/* Header */}
-      <div className="relative z-10 flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/30 backdrop-blur-sm">
-        <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-          <Zap className="w-5 h-5 text-black" fill="black" />
+      {/* Header - fixed */}
+      <div className="relative z-20 flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/40 backdrop-blur-sm shrink-0">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-700 flex items-center justify-center font-semibold">
+          M
         </div>
         <div>
           <h1 className="text-lg font-semibold tracking-wide">Mahoday</h1>
           <p className="text-[11px] text-slate-400 -mt-0.5">SR Institute of Management &amp; Technology</p>
         </div>
-        <Sparkles className="w-4 h-4 text-indigo-300 ml-auto opacity-60" />
+        <div className="ml-auto">
+          <UserMenu
+            user={user}
+            onNewChat={handleNewChat}
+            onOpenHistory={handleOpenHistory}
+            onLogout={onLogout}
+          />
+        </div>
       </div>
 
-      {/* Messages */}
+      {/* Messages - scrollable middle section only */}
       <div ref={scrollRef} className="relative z-10 flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div
-              className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                m.role === "user"
-                  ? "bg-indigo-600/80 rounded-br-sm"
-                  : "bg-white/10 border border-white/10 rounded-bl-sm backdrop-blur-sm"
-              }`}
-            >
-              {m.image && (
-                <img src={m.image} alt="upload" className="rounded-lg mb-2 max-h-40 object-cover" />
-              )}
-              {m.content}
+        {messages.length === 0 ? (
+          <WelcomeScreen />
+        ) : (
+          messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                  m.role === "user"
+                    ? "bg-indigo-600/80 rounded-br-sm"
+                    : "bg-white/10 border border-white/10 rounded-bl-sm backdrop-blur-sm"
+                }`}
+              >
+                {m.image && (
+                  <img src={m.image} alt="upload" className="rounded-lg mb-2 max-h-40 object-cover" />
+                )}
+                {m.content}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
         {thinking && (
           <div className="flex justify-start">
             <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-sm px-3.5 py-2.5">
@@ -160,9 +200,8 @@ export default function App() {
         )}
       </div>
 
-      {/* Image preview strip */}
       {imagePreview && (
-        <div className="relative z-10 px-4 pb-2">
+        <div className="relative z-10 px-4 pb-2 shrink-0">
           <div className="relative inline-block">
             <img src={imagePreview} alt="preview" className="h-16 rounded-lg border border-white/20" />
             <button
@@ -175,8 +214,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Input */}
-      <div className="relative z-10 px-3 py-3 border-t border-white/10 bg-black/30 backdrop-blur-sm">
+      {/* Input - fixed at bottom, always visible */}
+      <div className="relative z-20 px-3 py-3 border-t border-white/10 bg-black/40 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-2 py-2">
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -184,13 +223,7 @@ export default function App() {
           >
             <ImagePlus className="w-4 h-4" />
           </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImagePick}
-            className="hidden"
-          />
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImagePick} className="hidden" />
 
           <input
             value={input}
@@ -212,9 +245,9 @@ export default function App() {
           <button
             onClick={handleSend}
             disabled={thinking}
-            className="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center disabled:opacity-40"
+            className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center disabled:opacity-40"
           >
-            <Send className="w-4 h-4 text-black" />
+            <Send className="w-4 h-4 text-white" />
           </button>
         </div>
       </div>
