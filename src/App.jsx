@@ -3,21 +3,28 @@ import { Send, Mic, MicOff, ImagePlus, X } from "lucide-react";
 import SpaceBackground from "./components/SpaceBackground.jsx";
 import ElectricThinking from "./components/ElectricThinking.jsx";
 import WelcomeScreen from "./components/WelcomeScreen.jsx";
-import UserMenu from "./components/UserMenu.jsx";
+import SidePanel from "./components/SidePanel.jsx";
 import Login from "./pages/Login.jsx";
 import Signup from "./pages/Signup.jsx";
 import {
   saveMessage,
-  fetchHistoryForUser,
+  fetchSessionsForUser,
+  fetchMessagesBySession,
   getSession,
   clearSession,
 } from "./lib/supabase.js";
 
 const BACKEND_URL = "https://mahoday-backend-mq9v.onrender.com/chat";
 
+function newId() {
+  return crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 export default function App() {
   const [user, setUser] = useState(() => getSession());
-  const [authView, setAuthView] = useState("login"); // 'login' | 'signup'
+  const [authView, setAuthView] = useState("login");
 
   if (!user) {
     return (
@@ -34,7 +41,15 @@ export default function App() {
     );
   }
 
-  return <ChatApp user={user} onLogout={() => { clearSession(); setUser(null); }} />;
+  return (
+    <ChatApp
+      user={user}
+      onLogout={() => {
+        clearSession();
+        setUser(null);
+      }}
+    />
+  );
 }
 
 function ChatApp({ user, onLogout }) {
@@ -44,7 +59,9 @@ function ChatApp({ user, onLogout }) {
   const [listening, setListening] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageBase64, setImageBase64] = useState(null);
-  const [showHistory, setShowHistory] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [sessions, setSessions] = useState([]);
+  const [sessionId, setSessionId] = useState(() => newId());
 
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -101,14 +118,23 @@ function ChatApp({ user, onLogout }) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleNewChat = () => {
-    setMessages([]);
+  const openPanel = async () => {
+    setPanelOpen(true);
+    const list = await fetchSessionsForUser(user.id);
+    setSessions(list);
   };
 
-  const handleOpenHistory = async () => {
-    const history = await fetchHistoryForUser(user.id);
+  const handleNewChat = () => {
+    setMessages([]);
+    setSessionId(newId());
+    setPanelOpen(false);
+  };
+
+  const handleSelectSession = async (sid) => {
+    const history = await fetchMessagesBySession(sid);
     setMessages(history.map((m) => ({ role: m.role, content: m.content })));
-    setShowHistory(true);
+    setSessionId(sid);
+    setPanelOpen(false);
   };
 
   const handleSend = async () => {
@@ -117,7 +143,7 @@ function ChatApp({ user, onLogout }) {
 
     const userMsg = { role: "user", content: text, image: imagePreview };
     setMessages((prev) => [...prev, userMsg]);
-    saveMessage("user", text || "[image]", user.id);
+    saveMessage("user", text || "[image]", user.id, sessionId);
 
     const payload = { message: text, image: imageBase64 };
     setInput("");
@@ -133,7 +159,7 @@ function ChatApp({ user, onLogout }) {
       const data = await res.json();
       const reply = data?.reply || "Sorry, abhi jawab nahi mil paya.";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-      saveMessage("assistant", reply, user.id);
+      saveMessage("assistant", reply, user.id, sessionId);
     } catch (e) {
       setMessages((prev) => [
         ...prev,
@@ -144,33 +170,35 @@ function ChatApp({ user, onLogout }) {
     }
   };
 
+  const initial = (user?.full_name || "?").trim().charAt(0).toUpperCase();
+
   return (
     <div className="relative w-full h-dvh text-white flex flex-col font-sans">
       <div className="absolute inset-0">
         <SpaceBackground />
       </div>
 
-      {/* Header - fixed */}
+      {/* Header - fixed, no logo icon */}
       <div className="relative z-20 flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/40 backdrop-blur-sm shrink-0">
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-700 flex items-center justify-center font-semibold">
-          M
-        </div>
         <div>
           <h1 className="text-lg font-semibold tracking-wide">Mahoday</h1>
           <p className="text-[11px] text-slate-400 -mt-0.5">SR Institute of Management &amp; Technology</p>
         </div>
-        <div className="ml-auto">
-          <UserMenu
-            user={user}
-            onNewChat={handleNewChat}
-            onOpenHistory={handleOpenHistory}
-            onLogout={onLogout}
-          />
-        </div>
+        <button
+          onClick={openPanel}
+          className="ml-auto w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm font-semibold"
+        >
+          {initial}
+        </button>
+      </div>
+
+      {/* Static heading line */}
+      <div className="relative z-10 px-4 py-2 text-center shrink-0">
+        <p className="text-sm font-medium text-slate-200">Mahoday - AI Assistant of SRIMT</p>
       </div>
 
       {/* Messages - scrollable middle section only */}
-      <div ref={scrollRef} className="relative z-10 flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div ref={scrollRef} className="relative z-10 flex-1 overflow-y-auto px-4 py-2 space-y-3">
         {messages.length === 0 ? (
           <WelcomeScreen />
         ) : (
@@ -251,6 +279,16 @@ function ChatApp({ user, onLogout }) {
           </button>
         </div>
       </div>
+
+      <SidePanel
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
+        user={user}
+        sessions={sessions}
+        onNewChat={handleNewChat}
+        onSelectSession={handleSelectSession}
+        onLogout={onLogout}
+      />
     </div>
   );
 }
