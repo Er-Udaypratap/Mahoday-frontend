@@ -10,30 +10,67 @@ const headers = {
   Authorization: `Bearer ${SUPABASE_KEY}`,
 };
 
-// ---------- Chat history ----------
+// ---------- Chat history (session-based) ----------
 
-export async function saveMessage(role, content, userId) {
+export async function saveMessage(role, content, userId, sessionId) {
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/chat_history`, {
       method: "POST",
       headers: { ...headers, Prefer: "return=minimal" },
-      body: JSON.stringify({ role, content, user_id: userId || null }),
+      body: JSON.stringify({
+        role,
+        content,
+        user_id: userId || null,
+        session_id: sessionId || null,
+      }),
     });
   } catch (e) {
     console.error("Supabase save failed:", e);
   }
 }
 
-export async function fetchHistoryForUser(userId, limit = 50) {
+// Returns one entry per chat session: { session_id, title, created_at }
+export async function fetchSessionsForUser(userId) {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/chat_history?select=role,content,created_at&user_id=eq.${userId}&order=created_at.asc&limit=${limit}`,
+      `${SUPABASE_URL}/rest/v1/chat_history?select=session_id,role,content,created_at&user_id=eq.${userId}&order=created_at.asc`,
+      { headers }
+    );
+    if (!res.ok) return [];
+    const rows = await res.json();
+
+    const map = new Map();
+    for (const r of rows) {
+      if (!r.session_id) continue;
+      if (!map.has(r.session_id)) {
+        map.set(r.session_id, {
+          session_id: r.session_id,
+          title: r.role === "user" ? r.content : "New chat",
+          created_at: r.created_at,
+        });
+      } else {
+        map.get(r.session_id).created_at = r.created_at;
+      }
+    }
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
+  } catch (e) {
+    console.error("Supabase sessions fetch failed:", e);
+    return [];
+  }
+}
+
+export async function fetchMessagesBySession(sessionId) {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/chat_history?select=role,content,created_at&session_id=eq.${sessionId}&order=created_at.asc`,
       { headers }
     );
     if (!res.ok) return [];
     return await res.json();
   } catch (e) {
-    console.error("Supabase fetch failed:", e);
+    console.error("Supabase messages fetch failed:", e);
     return [];
   }
 }
@@ -41,7 +78,6 @@ export async function fetchHistoryForUser(userId, limit = 50) {
 // ---------- Auth (custom table-based, not Supabase Auth) ----------
 
 export async function signupUser({ fullName, email, mobile, dob }) {
-  // check existing
   const existing = await fetch(
     `${SUPABASE_URL}/rest/v1/app_users?select=id&email=eq.${encodeURIComponent(email)}`,
     { headers }
