@@ -9,7 +9,7 @@ export default function ElectricThinking() {
         <span className="absolute inline-flex h-full w-full rounded-full bg-blue-400/30 animate-ping" />
         <Zap className="relative w-4 h-4 text-blue-400 animate-blink" fill="currentColor" />
       </div>
-      <span className="text-xs text-slate-400 tracking-wide">Mahoday is thinking...</span>
+      <span className="text-xs text-slate-400 tracking-wide">Thinking...</span>
     </div>
   );
 }
