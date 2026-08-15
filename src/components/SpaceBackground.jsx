@@ -1,9 +1,11 @@
 import React, { useRef } from "react";
 
+// Clean deep-space background: nebula glow + twinkling stars only.
+// (Removed the shooting-star streaks - they were re-triggering constantly
+// and showing up as distracting static-looking lines on some screens.)
 export default function SpaceBackground() {
-  // Layer 1: tiny distant stars
   const farStars = useRef(
-    Array.from({ length: 120 }, () => ({
+    Array.from({ length: 110 }, () => ({
       top: Math.random() * 100,
       left: Math.random() * 100,
       size: Math.random() * 1.5 + 0.5,
@@ -12,9 +14,8 @@ export default function SpaceBackground() {
     }))
   ).current;
 
-  // Layer 2: closer, brighter stars
   const nearStars = useRef(
-    Array.from({ length: 40 }, () => ({
+    Array.from({ length: 35 }, () => ({
       top: Math.random() * 100,
       left: Math.random() * 100,
       size: Math.random() * 2 + 1.5,
@@ -23,21 +24,11 @@ export default function SpaceBackground() {
     }))
   ).current;
 
-  // Layer 3: shooting stars
-  const shootingStars = useRef(
-    Array.from({ length: 4 }, () => ({
-      top: Math.random() * 50,
-      left: Math.random() * 60 + 30,
-      delay: Math.random() * 8,
-    }))
-  ).current;
-
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none bg-[#05061a]">
-      {/* Nebula glow blobs */}
       <div className="absolute -top-32 -left-20 w-96 h-96 rounded-full bg-indigo-700/25 blur-[100px] animate-drift" />
       <div
-        className="absolute top-1/3 -right-24 w-80 h-80 rounded-full bg-amber-500/15 blur-[100px] animate-drift"
+        className="absolute top-1/3 -right-24 w-80 h-80 rounded-full bg-blue-500/15 blur-[100px] animate-drift"
         style={{ animationDelay: "1.5s" }}
       />
       <div
@@ -45,7 +36,6 @@ export default function SpaceBackground() {
         style={{ animationDelay: "3s" }}
       />
 
-      {/* Far stars */}
       {farStars.map((s, i) => (
         <div
           key={`f-${i}`}
@@ -61,7 +51,6 @@ export default function SpaceBackground() {
         />
       ))}
 
-      {/* Near stars with glow */}
       {nearStars.map((s, i) => (
         <div
           key={`n-${i}`}
@@ -74,20 +63,6 @@ export default function SpaceBackground() {
             boxShadow: "0 0 4px 1px rgba(255,255,255,0.6)",
             animationDelay: `${s.delay}s`,
             animationDuration: `${s.duration}s`,
-          }}
-        />
-      ))}
-
-      {/* Shooting stars */}
-      {shootingStars.map((s, i) => (
-        <div
-          key={`sh-${i}`}
-          className="absolute h-px w-16 bg-gradient-to-r from-white to-transparent animate-shoot"
-          style={{
-            top: `${s.top}%`,
-            left: `${s.left}%`,
-            animationDelay: `${s.delay}s`,
-            animationIterationCount: "infinite",
           }}
         />
       ))}
