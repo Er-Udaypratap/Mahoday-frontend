@@ -51,7 +51,7 @@ export default function SidePanel({
           <button
             onClick={() =>
               alert(
-                "Privacy Policy: Mahoday aapke naam, email, mobile aur chat messages ko SRIMT ke admission/support purposes ke liye Supabase mein store karta hai. Data kisi third party ko share nahi kiya jaata."
+                "Privacy Policy: Mahoday aapke naam, email, mobile aur chat messages ko SRIMT ke admission/support purposes ke liye Database mein store karta hai. Data kisi third party ko share nahi kiya jaata."
               )
             }
             className="w-full flex items-center gap-2 justify-center border border-white/20 rounded-lg py-2.5 text-sm text-slate-200 hover:bg-white/5"
