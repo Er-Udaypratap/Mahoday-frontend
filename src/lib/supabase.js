@@ -10,6 +10,18 @@ const headers = {
   Authorization: `Bearer ${SUPABASE_KEY}`,
 };
 
+// ---------- Password hashing (client-side, SHA-256) ----------
+// Note: this is basic hashing for a college-assistant use case, not
+// enterprise-grade auth. For stronger security, move auth to a real
+// backend endpoint with bcrypt/argon2 server-side.
+async function hashPassword(password) {
+  const enc = new TextEncoder().encode(password);
+  const digest = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 // ---------- Chat history (session-based) ----------
 
 export async function saveMessage(role, content, userId, sessionId) {
@@ -29,7 +41,6 @@ export async function saveMessage(role, content, userId, sessionId) {
   }
 }
 
-// Returns one entry per chat session: { session_id, title, created_at }
 export async function fetchSessionsForUser(userId) {
   try {
     const res = await fetch(
@@ -75,17 +86,19 @@ export async function fetchMessagesBySession(sessionId) {
   }
 }
 
-// ---------- Auth (custom table-based, not Supabase Auth) ----------
+// ---------- Auth (custom table-based, password hash) ----------
 
-export async function signupUser({ fullName, email, mobile, dob }) {
+export async function signupUser({ fullName, email, mobile, password }) {
   const existing = await fetch(
     `${SUPABASE_URL}/rest/v1/app_users?select=id&email=eq.${encodeURIComponent(email)}`,
     { headers }
   ).then((r) => r.json());
 
   if (existing && existing.length > 0) {
-    return { error: "Is email se pehle se account bana hua hai. Login karo." };
+    return { error: "An account with this email already exists. Please login." };
   }
+
+  const password_hash = await hashPassword(password);
 
   const res = await fetch(`${SUPABASE_URL}/rest/v1/app_users`, {
     method: "POST",
@@ -94,30 +107,36 @@ export async function signupUser({ fullName, email, mobile, dob }) {
       full_name: fullName,
       email,
       mobile,
-      date_of_birth: dob,
+      password_hash,
     }),
   });
 
   if (!res.ok) {
-    return { error: "Signup fail ho gaya, dobara try karo." };
+    return { error: "Signup failed, please try again." };
   }
   const data = await res.json();
-  return { user: data[0] };
+  const user = data[0];
+  delete user.password_hash;
+  return { user };
 }
 
-export async function loginUser({ email, dob }) {
+export async function loginUser({ email, password }) {
+  const password_hash = await hashPassword(password);
+
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/app_users?select=*&email=eq.${encodeURIComponent(
       email
-    )}&date_of_birth=eq.${dob}`,
+    )}&password_hash=eq.${password_hash}`,
     { headers }
   );
-  if (!res.ok) return { error: "Login fail ho gaya, dobara try karo." };
+  if (!res.ok) return { error: "Login failed, please try again." };
   const data = await res.json();
   if (!data || data.length === 0) {
-    return { error: "Email ya date of birth galat hai." };
+    return { error: "Email or password is incorrect." };
   }
-  return { user: data[0] };
+  const user = data[0];
+  delete user.password_hash;
+  return { user };
 }
 
 // ---------- Local session ----------
