@@ -157,13 +157,13 @@ function ChatApp({ user, onLogout }) {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      const reply = data?.reply || "Sorry, abhi jawab nahi mil paya.";
+      const reply = data?.reply || "Sorry, I couldn't get a response. Please try again.";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
       saveMessage("assistant", reply, user.id, sessionId);
     } catch (e) {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Backend se connect nahi ho paya. Thodi der mein try karo." },
+        { role: "assistant", content: "Couldn't connect to the backend. Please try again shortly." },
       ]);
     } finally {
       setThinking(false);
@@ -178,7 +178,6 @@ function ChatApp({ user, onLogout }) {
         <SpaceBackground />
       </div>
 
-      {/* Header - fixed, no logo icon */}
       <div className="relative z-20 flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/40 backdrop-blur-sm shrink-0">
         <div>
           <h1 className="text-lg font-semibold tracking-wide">Mahoday</h1>
@@ -192,12 +191,10 @@ function ChatApp({ user, onLogout }) {
         </button>
       </div>
 
-      {/* Static heading line */}
       <div className="relative z-10 px-4 py-2 text-center shrink-0">
         <p className="text-sm font-medium text-slate-200">Mahoday - AI Assistant of SRIMT</p>
       </div>
 
-      {/* Messages - scrollable middle section only */}
       <div ref={scrollRef} className="relative z-10 flex-1 overflow-y-auto px-4 py-2 space-y-3">
         {messages.length === 0 ? (
           <WelcomeScreen />
@@ -242,7 +239,6 @@ function ChatApp({ user, onLogout }) {
         </div>
       )}
 
-      {/* Input - fixed at bottom, always visible */}
       <div className="relative z-20 px-3 py-3 border-t border-white/10 bg-black/40 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-2 py-2">
           <button
@@ -257,7 +253,7 @@ function ChatApp({ user, onLogout }) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Apna sawaal likho..."
+            placeholder="Type your question..."
             className="flex-1 bg-transparent outline-none text-sm placeholder:text-slate-500"
           />
 
