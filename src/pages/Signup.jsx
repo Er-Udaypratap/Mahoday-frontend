@@ -5,19 +5,23 @@ export default function Signup({ onAuthed, onSwitchToLogin }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
-  const [dob, setDob] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!fullName || !email || !mobile || !dob) {
-      setError("Sab fields fill karna zaroori hai.");
+    if (!fullName || !email || !mobile || !password) {
+      setError("Please fill in all fields.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
       return;
     }
     setLoading(true);
-    const { user, error: err } = await signupUser({ fullName, email, mobile, dob });
+    const { user, error: err } = await signupUser({ fullName, email, mobile, password });
     setLoading(false);
     if (err) {
       setError(err);
@@ -29,8 +33,8 @@ export default function Signup({ onAuthed, onSwitchToLogin }) {
 
   return (
     <div className="w-full max-w-sm mx-auto">
-      <h2 className="text-xl font-semibold mb-1">Account banao</h2>
-      <p className="text-sm text-slate-400 mb-6">Mahoday use karne ke liye pehle signup karo.</p>
+      <h2 className="text-xl font-semibold mb-1">Create an account</h2>
+      <p className="text-sm text-slate-400 mb-6">Sign up to start using Mahoday.</p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
@@ -53,15 +57,13 @@ export default function Signup({ onAuthed, onSwitchToLogin }) {
           placeholder="Mobile number"
           className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400/50"
         />
-        <div>
-          <label className="block text-xs text-slate-400 mb-1 ml-1">Date of birth</label>
-          <input
-            type="date"
-            value={dob}
-            onChange={(e) => setDob(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400/50 [color-scheme:dark]"
-          />
-        </div>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400/50"
+        />
 
         {error && <p className="text-xs text-red-400">{error}</p>}
 
@@ -75,9 +77,9 @@ export default function Signup({ onAuthed, onSwitchToLogin }) {
       </form>
 
       <p className="text-xs text-slate-400 mt-5 text-center">
-        Pehle se account hai?{" "}
+        Already have an account?{" "}
         <button onClick={onSwitchToLogin} className="text-amber-300 underline">
-          Login karo
+          Login
         </button>
       </p>
     </div>
