@@ -23,15 +23,8 @@ export default function SidePanel({
 }) {
   return (
     <>
-      {/* Backdrop */}
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={onClose}
-        />
-      )}
+      {open && <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />}
 
-      {/* Panel */}
       <div
         className={`fixed top-0 right-0 h-dvh w-[82%] max-w-xs bg-[#0b0c24] border-l border-white/10 z-50 flex flex-col transition-transform duration-300 ${
           open ? "translate-x-0" : "translate-x-full"
@@ -51,7 +44,7 @@ export default function SidePanel({
           <button
             onClick={() =>
               alert(
-                "Privacy Policy: Mahoday aapke naam, email, mobile aur chat messages ko SRIMT ke admission/support purposes ke liye Database mein store karta hai. Data kisi third party ko share nahi kiya jaata."
+                "Privacy Policy: Mahoday stores your name, email, mobile number, and chat messages in Supabase for SRIMT admission/support purposes. Your data is not shared with any third party."
               )
             }
             className="w-full flex items-center gap-2 justify-center border border-white/20 rounded-lg py-2.5 text-sm text-slate-200 hover:bg-white/5"
@@ -72,7 +65,7 @@ export default function SidePanel({
 
         <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1.5">
           {sessions.length === 0 && (
-            <p className="px-2 text-xs text-slate-500">Abhi koi purani chat nahi hai.</p>
+            <p className="px-2 text-xs text-slate-500">No previous chats yet.</p>
           )}
           {sessions.map((s) => (
             <button
