@@ -1,7 +1,5 @@
 import React from "react";
 
-// Centered welcome state - shown only before the first message is sent.
-// No icon here by request - text only.
 export default function WelcomeScreen() {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center px-6">
