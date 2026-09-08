@@ -1,8 +1,5 @@
 import React, { useRef } from "react";
 
-// Clean deep-space background: nebula glow + twinkling stars only.
-// (Removed the shooting-star streaks - they were re-triggering constantly
-// and showing up as distracting static-looking lines on some screens.)
 export default function SpaceBackground() {
   const farStars = useRef(
     Array.from({ length: 110 }, () => ({
