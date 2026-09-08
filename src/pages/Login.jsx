@@ -3,19 +3,19 @@ import { loginUser, saveSession } from "../lib/supabase.js";
 
 export default function Login({ onAuthed, onSwitchToSignup }) {
   const [email, setEmail] = useState("");
-  const [dob, setDob] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!email || !dob) {
-      setError("Email aur date of birth dono chahiye.");
+    if (!email || !password) {
+      setError("Please enter both email and password.");
       return;
     }
     setLoading(true);
-    const { user, error: err } = await loginUser({ email, dob });
+    const { user, error: err } = await loginUser({ email, password });
     setLoading(false);
     if (err) {
       setError(err);
@@ -27,8 +27,8 @@ export default function Login({ onAuthed, onSwitchToSignup }) {
 
   return (
     <div className="w-full max-w-sm mx-auto">
-      <h2 className="text-xl font-semibold mb-1">Login karo</h2>
-      <p className="text-sm text-slate-400 mb-6">Apne email aur date of birth se login karo.</p>
+      <h2 className="text-xl font-semibold mb-1">Login</h2>
+      <p className="text-sm text-slate-400 mb-6">Login with your email and password.</p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
@@ -38,15 +38,13 @@ export default function Login({ onAuthed, onSwitchToSignup }) {
           placeholder="Email"
           className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400/50"
         />
-        <div>
-          <label className="block text-xs text-slate-400 mb-1 ml-1">Date of birth</label>
-          <input
-            type="date"
-            value={dob}
-            onChange={(e) => setDob(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400/50 [color-scheme:dark]"
-          />
-        </div>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400/50"
+        />
 
         {error && <p className="text-xs text-red-400">{error}</p>}
 
@@ -60,9 +58,9 @@ export default function Login({ onAuthed, onSwitchToSignup }) {
       </form>
 
       <p className="text-xs text-slate-400 mt-5 text-center">
-        Account nahi hai?{" "}
+        Don't have an account?{" "}
         <button onClick={onSwitchToSignup} className="text-amber-300 underline">
-          Signup karo
+          Sign up
         </button>
       </p>
     </div>
