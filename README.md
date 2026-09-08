@@ -1,48 +1,45 @@
 # Mahoday — SRIMT AI Assistant (Frontend)
 
-React + Vite frontend for Mahoday, the AI assistant for SR Institute of
+React + Vite PWA frontend for Mahoday, the AI assistant for SR Institute of
 Management & Technology, Lucknow.
 
 ## Features
-- Deep-space dark theme: nebula glow, multi-layer twinkling stars, shooting stars
-- Blinking electric (⚡) "thinking" indicator instead of a plain spinner
-- Voice input (Web Speech API — works on Chrome/Edge/most Android browsers)
-- Photo upload (sent to backend as base64, e.g. for Gemini multimodal)
-- Chat history saved to Supabase (`chat_history` table)
-- Mobile-first, responsive layout
+- Deep-space dark theme
+- Blinking blue electric "thinking" indicator
+- Voice input, photo upload
+- Email + password signup/login (custom Supabase table auth, SHA-256 hashed)
+- Session-based chat history (New chat / Old chats side panel)
+- Installable as a PWA (Add to Home Screen)
 
-## Before you deploy
+## Supabase setup required
+```sql
+create table if not exists app_users (
+  id uuid primary key default gen_random_uuid(),
+  full_name text not null,
+  email text not null unique,
+  mobile text not null,
+  password_hash text not null,
+  created_at timestamptz not null default now()
+);
+alter table app_users enable row level security;
+create policy "Allow public signup insert" on app_users for insert to anon with check (true);
+create policy "Allow public login select" on app_users for select to anon using (true);
 
-1. **Backend URL**: open `src/App.jsx` and replace:
-   ```js
-   const BACKEND_URL = "https://your-backend.onrender.com/chat";
-   ```
-   with your deployed FastAPI + Gemini backend endpoint.
-
-2. **Supabase table**: create a `chat_history` table in your Supabase project
-   with columns:
-   - `id` (uuid, primary key, default `gen_random_uuid()`)
-   - `role` (text)
-   - `content` (text)
-   - `created_at` (timestamptz, default `now()`)
-
-   Also enable Row Level Security with an insert/select policy for the
-   `anon`/publishable role, or history saving will silently fail.
-
-## Deploy without local setup (mobile-friendly)
-
-**Option A — Netlify drag-and-drop:**
-This project needs a build step, so it can't be dragged in raw. Easiest
-mobile path: push this folder to a GitHub repo (GitHub mobile app or web
-upload works), then connect that repo in Netlify/Vercel — they'll run
-`npm install && npm run build` for you automatically.
-
-**Option B — StackBlitz / CodeSandbox (browser-based, no CLI):**
-Upload this folder there, it installs and runs in-browser, and you can
-deploy straight from the browser on mobile.
-
-## Local dev (if you ever use a desktop)
-```bash
-npm install
-npm run dev
+create table if not exists chat_history (
+  id uuid primary key default gen_random_uuid(),
+  role text not null,
+  content text not null,
+  user_id uuid references app_users(id),
+  session_id uuid,
+  created_at timestamptz not null default now()
+);
+alter table chat_history enable row level security;
+create policy "Allow public insert" on chat_history for insert to anon with check (true);
+create policy "Allow public select" on chat_history for select to anon using (true);
 ```
+
+## Backend
+Set `BACKEND_URL` in `src/App.jsx` to your deployed FastAPI + Gemini backend.
+
+## Deploy
+Push to GitHub, connect the repo on Vercel (Framework: Vite, auto-detected).
